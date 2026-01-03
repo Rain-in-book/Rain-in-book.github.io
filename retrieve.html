@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>检索</title>
+</head>
+<body bgcolor="#FFFDD0">
+    <h1>检索</h1>
+    
+    <div>
+        <form id="searchForm">
+            <div>
+                <input type="checkbox" id="searchById" onchange="toggleSearchOption('id')">
+                <label for="searchById">从序号开始检索</label>
+                <div id="idSearchOption" style="display:none; margin-left:20px;">
+                    <input type="text" id="idInput" placeholder="请输入序号" size="15">
+                    <button type="button" onclick="searchById()">开始检索</button>
+                </div>
+            </div>
+            
+            <br>
+            
+            <div>
+                <input type="checkbox" id="searchByName" onchange="toggleSearchOption('name')">
+                <label for="searchByName">从文件名开始检索</label>
+                <div id="nameSearchOption" style="display:none; margin-left:20px;">
+                    <input type="radio" id="nameContains" name="nameSearchType" checked> 包含字符目标
+                    <input type="radio" id="nameExact" name="nameSearchType"> 全字符目标
+                    <br>
+                    <input type="text" id="nameInput" placeholder="请输入字符" size="15">
+                    <button type="button" onclick="searchByName()">开始检索</button>
+                </div>
+            </div>
+            
+            <br>
+            
+            <div>
+                <input type="checkbox" id="searchBySize" onchange="toggleSearchOption('size')">
+                <label for="searchBySize">从大小开始检索</label>
+                <div id="sizeSearchOption" style="display:none; margin-left:20px;">
+                    <input type="radio" id="sizeGreater" name="sizeSearchType" checked> 大于目标
+                    <input type="radio" id="sizeLess" name="sizeSearchType"> 小于目标
+                    <input type="radio" id="sizeExact" name="sizeSearchType"> 指定目标
+                    <br>
+                    <input type="text" id="sizeInput" placeholder="请输入大小目标" size="25">
+                    <button type="button" onclick="searchBySize()">开始检索</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <hr>
+    
+    <div id="searchResults">
+        <p>请选择......</p>
+    </div>
+    
+    <script src="resource.js"></script>
+    
+    <script>
+        function toggleSearchOption(type) {
+            const checkboxes = ['searchById', 'searchByName', 'searchBySize'];
+            
+            checkboxes.forEach(cbId => {
+                if (cbId !== 'searchBy' + type.charAt(0).toUpperCase() + type.slice(1)) {
+                    document.getElementById(cbId).checked = false;
+                    const otherType = cbId.replace('searchBy', '').toLowerCase();
+                    document.getElementById(otherType + 'SearchOption').style.display = 'none';
+                }
+            });
+            
+            const optionDiv = document.getElementById(type + 'SearchOption');
+            const checkbox = document.getElementById('searchBy' + type.charAt(0).toUpperCase() + type.slice(1));
+            
+            if (checkbox.checked) {
+                optionDiv.style.display = 'block';
+            } else {
+                optionDiv.style.display = 'none';
+            }
+            
+            document.getElementById('searchResults').innerHTML = '<p>请选择检索条件</p>';
+        }
+        
+        function getResourceData() {
+            if (typeof resources === 'undefined' || !Array.isArray(resources)) {
+                document.getElementById('searchResults').innerHTML = '<p style="color:red;">资源数据加载失败</p>';
+                return [];
+            }
+            return resources;
+        }
+        
+        function searchById() {
+            const idInput = document.getElementById('idInput').value.trim();
+            const resourceData = getResourceData();
+            const results = document.getElementById('searchResults');
+            
+            if (!idInput) {
+                results.innerHTML = '<p style="color:red;">请输入序号</p>';
+                return;
+            }
+            
+            const id = parseInt(idInput);
+            if (isNaN(id)) {
+                results.innerHTML = '<p style="color:red;">序号必须是数字</p>';
+                return;
+            }
+            
+            const foundResources = resourceData.filter(resource => resource.id === id);
+            
+            if (foundResources.length === 0) {
+                results.innerHTML = '<p><b>无！</b></p>';
+            } else {
+                displayResults(foundResources);
+            }
+        }
+        
+        function searchByName() {
+            const nameInput = document.getElementById('nameInput').value.trim();
+            const resourceData = getResourceData();
+            const results = document.getElementById('searchResults');
+            
+            if (!nameInput) {
+                results.innerHTML = '<p style="color:red;">请输入字符</p>';
+                return;
+            }
+            
+            const isExactMatch = document.getElementById('nameExact').checked;
+            let foundResources = [];
+            
+            if (isExactMatch) {
+                foundResources = resourceData.filter(resource => 
+                    resource.name === nameInput
+                );
+            } else {
+                foundResources = resourceData.filter(resource => 
+                    resource.name.includes(nameInput)
+                );
+            }
+            
+            if (foundResources.length === 0) {
+                results.innerHTML = '<p><b>无！</b></p>';
+            } else {
+                displayResults(foundResources);
+            }
+        }
+        
+        function searchBySize() {
+            const sizeInput = document.getElementById('sizeInput').value.trim();
+            const resourceData = getResourceData();
+            const results = document.getElementById('searchResults');
+            
+            if (!sizeInput) {
+                results.innerHTML = '<p style="color:red;">请输入大小目标</p>';
+                return;
+            }
+            
+            const sizeMatch = sizeInput.match(/^(\d+(\.\d+)?)\s*([KMG]?B)$/i);
+            if (!sizeMatch) {
+                results.innerHTML = '<p style="color:red;">大小格式不对！</p>';
+                return;
+            }
+            
+            const targetSize = parseFloat(sizeMatch[1]);
+            const unit = sizeMatch[3].toUpperCase();
+            
+            let targetBytes = targetSize;
+            if (unit === 'KB') targetBytes *= 1024;
+            else if (unit === 'MB') targetBytes *= 1024 * 1024;
+            else if (unit === 'GB') targetBytes *= 1024 * 1024 * 1024;
+            
+            const searchType = document.querySelector('input[name="sizeSearchType"]:checked').id;
+            let foundResources = [];
+            
+            const resourcesWithBytes = resourceData.map(resource => {
+                const sizeMatch = resource.size.match(/^(\d+(\.\d+)?)\s*([KMG]?B)$/i);
+                if (!sizeMatch) return { ...resource, bytes: 0 };
+                
+                const size = parseFloat(sizeMatch[1]);
+                const unit = sizeMatch[3].toUpperCase();
+                let bytes = size;
+                
+                if (unit === 'KB') bytes *= 1024;
+                else if (unit === 'MB') bytes *= 1024 * 1024;
+                else if (unit === 'GB') bytes *= 1024 * 1024 * 1024;
+                
+                return { ...resource, bytes };
+            });
+            
+            if (searchType === 'sizeGreater') {
+                foundResources = resourcesWithBytes.filter(resource => resource.bytes > targetBytes);
+            } else if (searchType === 'sizeLess') {
+                foundResources = resourcesWithBytes.filter(resource => resource.bytes < targetBytes);
+            } else if (searchType === 'sizeExact') {
+                foundResources = resourcesWithBytes.filter(resource => Math.abs(resource.bytes - targetBytes) < 0.01);
+            }
+            
+            if (foundResources.length === 0) {
+                results.innerHTML = '<p><b>无！</b></p>';
+            } else {
+                const cleanResults = foundResources.map(({bytes, ...rest}) => rest);
+                displayResults(cleanResults);
+            }
+        }
+        
+        function displayResults(foundResources) {
+            let html = '<table border="1" cellpadding="10" cellspacing="0" width="100%">';
+            html += '<thead><tr><th width="10%">序号</th><th width="50%">文件名</th><th width="20%">大小</th><th width="20%">描述</th></tr></thead>';
+            html += '<tbody>';
+            
+            foundResources.forEach(function(resource) {
+                html += `<tr>`;
+                html += `<td align="center"><b>${resource.id}</b></td>`;
+                html += `<td><a href="${resource.link}" target="_blank"><b>${resource.name}</b></a></td>`;
+                html += `<td align="center">${resource.size}</td>`;
+                html += `<td>${resource.description || '-'}</td>`;
+                html += `</tr>`;
+            });
+            
+            html += '</tbody></table>';
+            
+            document.getElementById('searchResults').innerHTML = html;
+        }
+    </script>
+</body>
+</html>

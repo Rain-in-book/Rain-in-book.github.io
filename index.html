@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公共资源站</title>
+</head>
+<body bgcolor="#FFFDD0">
+    <h1>公共资源站</h1>
+    
+    <div>
+        <button onclick="window.location.href='retrieve.html'">检索</button>
+        <button onclick="loadResources()">刷新</button>
+    </div>
+    
+    <div id="resource-list">
+        <p>正在加载...</p>
+    </div>
+
+    <script src="resource.js"></script>
+    
+    <script>
+        function loadResources() {
+            const resourceList = document.getElementById('resource-list');
+            
+            if (typeof resources === 'undefined' || !Array.isArray(resources) || resources.length === 0) {
+                resourceList.innerHTML = '<p>无！</p>';
+                return;
+            }
+            
+            let html = '<table border="1" cellpadding="10" cellspacing="0" width="100%">';
+            html += '<thead><tr><th width="10%">序号</th><th width="50%">文件名</th><th width="20%">大小</th><th width="20%">描述</th></tr></thead>';
+            html += '<tbody>';
+            
+            resources.forEach(function(resource) {
+                html += `<tr>`;
+                html += `<td align="center"><b>${resource.id}</b></td>`;
+                html += `<td><a href="${resource.link}" target="_blank"><b>${resource.name}</b></a></td>`;
+                html += `<td align="center">${resource.size}</td>`;
+                html += `<td>${resource.description || '-'}</td>`;
+                html += `</tr>`;
+            });
+            
+            html += '</tbody></table>';
+            
+            resourceList.innerHTML = html;
+        }
+        
+        window.onload = loadResources;
+    </script>
+</body>
+</html>
